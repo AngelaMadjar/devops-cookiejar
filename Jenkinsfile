@@ -1,30 +1,25 @@
 pipeline {
   agent { label 'docker' }
 
-  options {
-    timestamps()
-  }
+  options { timestamps() }
 
   environment {
     NEXUS_REGISTRY = "nexus:8083"
-    NEXUS_REPO     = "docker-hosted"
-    DOCKER_CREDS  = "nexus-creds"
+    NEXUS_REPO     = "docker-hosted"  
+    DOCKER_CREDS   = "nexus-creds"
 
-    APP_IMAGE     = "cookiejar-api"
-    NGINX_IMAGE   = "cookiejar-nginx"
-    SMOKE_IMAGE   = "cookiejar-smoke"
+    APP_IMAGE   = "cookiejar-api"
+    NGINX_IMAGE = "cookiejar-nginx"
+    SMOKE_IMAGE = "cookiejar-smoke"
 
-    IMAGE_TAG     = "${BUILD_NUMBER}"
-    COMPOSE_FILE  = "deployment/docker-compose.yml"
+    IMAGE_TAG    = "${BUILD_NUMBER}"
+    COMPOSE_FILE = "deployment/docker-compose.yml"
     COMPOSE_PROJECT_NAME = "cookiejar-ci-${BUILD_NUMBER}"
   }
 
   stages {
-
     stage("Checkout") {
-      steps {
-        checkout scm
-      }
+      steps { checkout scm }
     }
 
     stage("Build app images") {
@@ -82,15 +77,12 @@ pipeline {
           sh '''
             set -e
 
-            echo "$NEXUS_PASS" | docker login \
-              http://${NEXUS_REGISTRY} \
+            echo "$NEXUS_PASS" | docker login ${NEXUS_REGISTRY} \
               -u "$NEXUS_USER" --password-stdin
 
             for img in ${APP_IMAGE} ${NGINX_IMAGE} ${SMOKE_IMAGE}; do
-              docker tag $img:${IMAGE_TAG} \
-                ${NEXUS_REGISTRY}/${NEXUS_REPO}/$img:${IMAGE_TAG}
-              docker push \
-                ${NEXUS_REGISTRY}/${NEXUS_REPO}/$img:${IMAGE_TAG}
+              docker tag $img:${IMAGE_TAG} ${NEXUS_REGISTRY}/$img:${IMAGE_TAG}
+              docker push ${NEXUS_REGISTRY}/$img:${IMAGE_TAG}
             done
           '''
         }
@@ -100,7 +92,7 @@ pipeline {
 
   post {
     always {
-      sh 'docker logout http://${NEXUS_REGISTRY} || true'
+      sh 'docker logout ${NEXUS_REGISTRY} || true'
     }
   }
 }
