@@ -66,6 +66,21 @@ pipeline {
         }
       }
     }
+    stage("Debug Nexus /v2") {
+      steps {
+        sh '''
+          set -eux
+          echo "== DNS =="
+          getent hosts nexus || true
+
+          echo "== Curl /v2 (no auth) =="
+          curl -i http://nexus:8083/v2/ || true
+
+          echo "== Curl /v2 (basic auth) =="
+          curl -i -u "$NEXUS_USER:$NEXUS_PASS" http://nexus:8083/v2/ || true
+        '''
+      }
+    }
 
     stage("Push images to Nexus") {
       steps {
