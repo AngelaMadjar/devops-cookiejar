@@ -7,7 +7,7 @@ pipeline {
   }
 
   environment {
-    NEXUS_DOCKER_REGISTRY = "nexus:8083"
+    NEXUS_DOCKER_REGISTRY = "http://nexus:8083"
     DOCKER_CREDS_ID       = "nexus-creds"
     IMAGE_REPO            = "cookiejar-api"
 
