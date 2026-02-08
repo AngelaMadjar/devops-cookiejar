@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cookie Jar</title>
+
+  <style>
+    :root{
+      --bg:#eef6ff;
+      --card:#ffffff;
+      --border:#cfe3ff;
+      --text:#0b1b33;
+      --muted:#5a6b85;
+      --accent:#3b82f6;
+      --accent2:#60a5fa;
+      --danger:#ef4444;
+      --shadow: 0 10px 30px rgba(15, 23, 42, .08);
+      --radius: 16px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: linear-gradient(180deg, #e6f2ff 0%, var(--bg) 60%);
+      color:var(--text);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .bg-pattern{
+      position: fixed;
+      inset: 0;
+      background-image: url("{{ url_for('static', filename='cookie_monster_2.png') }}");
+      background-repeat: repeat;
+      background-size: 260px auto; /* tweak */
+      opacity: 0.6;              /* keep the same subtle opacity */
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-wash{
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(230,242,255,0.78) 0%,
+        rgba(238,246,255,0.72) 60%,
+        rgba(238,246,255,0.72) 100%
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* All real content above background layers */
+    .wrap{
+      max-width:1200px;
+      margin:32px auto;
+      padding:0 16px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .topbar{
+      display:flex;
+      gap:16px;
+      align-items:flex-start;
+      justify-content:space-between;
+      margin-bottom:16px;
+    }
+
+    .title h1{ margin:0; font-size:28px; letter-spacing:-.02em;}
+    .title p{ margin:6px 0 0; color:var(--muted); }
+
+    .search{
+      min-width: 320px;
+      max-width: 520px;
+      width: 40%;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      padding:10px 14px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .search input{
+      border:0; outline:none; width:100%;
+      font-size:14px; background:transparent;
+    }
+
+    .tabs{
+      display:flex;
+      gap:8px;
+      margin: 10px 0 14px;
+    }
+    .tab{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.85);
+      padding:10px 14px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-weight:700;
+      color:var(--muted);
+      user-select:none;
+    }
+    .tab.active{
+      background: var(--card);
+      color: var(--text);
+      border-color: #b9d6ff;
+      box-shadow: var(--shadow);
+    }
+
+    .panel{
+      display:none;
+      background: var(--card);              
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panel.active{ display:block; }
+
+    /* Per-table header bar */
+    .tablebar{
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      gap:10px;
+      padding:12px;
+      background: linear-gradient(180deg, #f7fbff 0%, #f1f8ff 100%);
+      border-bottom: 1px solid #e7f0ff;
+    }
+    .tablebar .bar-status{
+      margin-left: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .tablebar .bar-status.ok{ color:#0f766e; }
+    .tablebar .bar-status.err{ color:#b91c1c; }
+
+    table{ width:100%; border-collapse:separate; border-spacing:0; background: #fff; }
+    th, td{ padding:12px 12px; border-bottom:1px solid #e7f0ff; vertical-align:top; }
+    th{
+      text-align:left;
+      font-size:12px;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--muted);
+      background: linear-gradient(180deg, #f7fbff 0%, #f1f8ff 100%);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr{ background:#fff; }
+    tbody tr:hover{ background:#f6fbff; }
+
+    .pill{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background:#f3f8ff;
+      color:#274060;
+      font-size:12px;
+    }
+    .mono{ font-variant-numeric: tabular-nums; }
+
+    .input{
+      width:100%;
+      border:1px solid var(--border);
+      border-radius: 10px;
+      padding:10px 10px;
+      outline:none;
+      background:#fbfdff;
+    }
+
+    .actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      border:1px solid var(--border);
+      background:#f3f8ff;
+      color:var(--text);
+      padding:9px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+      user-select:none;
+    }
+    .btn-primary{
+      background: linear-gradient(180deg, var(--accent2) 0%, var(--accent) 100%);
+      border-color: #2d6fe4;
+      color:white;
+    }
+    .btn-danger{
+      background: linear-gradient(180deg, #ff6b6b 0%, var(--danger) 100%);
+      border-color:#dc2626;
+      color:white;
+    }
+    .btn:disabled{ opacity:.65; cursor:not-allowed; }
+
+    .status{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:6px;
+    }
+    .status.ok{ color:#0f766e; }
+    .status.err{ color:#b91c1c; }
+
+    .footerbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px;
+      background:#f7fbff;
+      border-top: 1px solid #e7f0ff;
+    }
+
+    .pager{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .pager .btn{ padding:8px 10px; border-radius: 10px; }
+    .muted{ color:var(--muted); font-size:13px; }
+  </style>
+</head>
+
+<body>
+  <!-- background layers -->
+  <div class="bg-pattern" aria-hidden="true"></div>
+  <div class="bg-wash" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
+        <h1>Cookie Jar</h1>
+        <p>Trackers & Vendors</p>
+        <p id="versionBadge" class="muted">Version: loading…</p>
+      </div>
+
+      <div class="search">
+        🔎
+        <input id="searchInput" placeholder="Search current tab..." />
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="trackers">Trackers</button>
+      <button class="tab" data-tab="vendors">Vendors</button>
+    </div>
+
+    <!-- TRACKERS PANEL -->
+    <section id="panel-trackers" class="panel active">
+      <div class="tablebar">
+        <button class="btn btn-primary" id="btnPopulateTrackers" type="button">Populate table</button>
+        <button class="btn btn-danger" id="btnEmptyTrackers" type="button">Empty table</button>
+        <span class="bar-status" id="barStatusTrackers"></span>
+      </div>
+
+      <table id="trackersTable">
+        <thead>
+          <tr>
+            <th style="width:80px;">ID</th>
+            <th>Domain</th>
+            <th>Category</th>
+            <th>Vendor</th>
+            <th>Type</th>
+            <th>Name</th>
+            <th>Purpose</th>
+            <th style="width:220px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="trackersTbody">
+          {% for r in rows %}
+          <tr class="tracker-row"
+              data-search="{{ ((r.domain or '') ~ ' ' ~ (r.category or '') ~ ' ' ~ (r.vendor or '') ~ ' ' ~ (r.type or '') ~ ' ' ~ (r.name or '') ~ ' ' ~ (r.purpose or ''))|lower }}"
+              data-tracker-id="{{ r.tracker_id }}">
+            <td><span class="pill mono">{{ r.tracker_id }}</span></td>
+            <td>{{ r.domain }}</td>
+            <td>{{ r.category }}</td>
+            <td>{{ r.vendor }}</td>
+            <td>{{ r.type }}</td>
+            <td>{{ r.name }}</td>
+            <td>
+              <input class="input" id="purpose-{{ r.tracker_id }}" value="{{ r.purpose or '' }}" placeholder="Set purpose..." />
+              <div class="status" id="tstatus-{{ r.tracker_id }}"></div>
+            </td>
+            <td>
+              <div class="actions" data-tracker-id="{{ r.tracker_id }}">
+                <button class="btn btn-primary btn-tsave" type="button">Save</button>
+                <button class="btn btn-danger btn-tdelete" type="button">Delete</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="footerbar">
+        <div class="muted" id="trackersCount"></div>
+        <div class="pager">
+          <button class="btn" id="trackersPrev">Prev</button>
+          <span class="muted" id="trackersPage"></span>
+          <button class="btn" id="trackersNext">Next</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VENDORS PANEL -->
+    <section id="panel-vendors" class="panel">
+      <div class="tablebar">
+        <button class="btn btn-primary" id="btnPopulateVendors" type="button">Populate table</button>
+        <button class="btn btn-danger" id="btnEmptyVendors" type="button">Empty table</button>
+        <span class="bar-status" id="barStatusVendors"></span>
+      </div>
+
+      <table id="vendorsTable">
+        <thead>
+          <tr>
+            <th style="width:80px;">ID</th>
+            <th>Vendor</th>
+            <th>Description</th>
+            <th style="width:160px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="vendorsTbody">
+          <!-- filled by JS -->
+        </tbody>
+      </table>
+
+      <div class="footerbar">
+        <div class="muted" id="vendorsCount"></div>
+        <div class="pager">
+          <button class="btn" id="vendorsPrev">Prev</button>
+          <span class="muted" id="vendorsPage"></span>
+          <button class="btn" id="vendorsNext">Next</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+  async function loadVersion(){
+  try{
+    const res = await fetch("/version");
+    const v = await res.json();
+    document.getElementById("versionBadge").textContent =
+      `Version: ${v.color} (${v.version})`;
+  } catch(e){
+    document.getElementById("versionBadge").textContent = "Version: unavailable";
+  }
+}
+loadVersion();
+
+  // DB routes
+  const DB_POPULATE_URL = "/db/populate";
+  const DB_EMPTY_URL = "/db/empty";
+
+  // Tabs
+  const tabs = document.querySelectorAll(".tab");
+  const panels = {
+    trackers: document.getElementById("panel-trackers"),
+    vendors: document.getElementById("panel-vendors"),
+  };
+  let activeTab = "trackers";
+
+  tabs.forEach(t => t.addEventListener("click", async () => {
+    tabs.forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    activeTab = t.dataset.tab;
+
+    panels.trackers.classList.toggle("active", activeTab === "trackers");
+    panels.vendors.classList.toggle("active", activeTab === "vendors");
+
+    document.getElementById("searchInput").value = "";
+    applySearchAndPagination();
+
+    if (activeTab === "vendors" && !window.__vendorsLoaded) {
+      await loadVendors();
+      window.__vendorsLoaded = true;
+      applySearchAndPagination();
+    }
+  }));
+
+  // Pagination
+  const PAGE_SIZE = 15;
+  let trackersPage = 1;
+  let vendorsPage = 1;
+
+  function setStatus(elId, msg, cls){
+    const el = document.getElementById(elId);
+    if(!el) return;
+    el.className = "status " + (cls || "");
+    el.textContent = msg || "";
+  }
+
+  function setBarStatus(which, msg, cls){
+    const el = document.getElementById(which === "vendors" ? "barStatusVendors" : "barStatusTrackers");
+    if(!el) return;
+    el.className = "bar-status " + (cls || "");
+    el.textContent = msg || "";
+  }
+
+  function disableBarButtons(which, disabled){
+    if(which === "vendors"){
+      document.getElementById("btnPopulateVendors").disabled = disabled;
+      document.getElementById("btnEmptyVendors").disabled = disabled;
+    } else {
+      document.getElementById("btnPopulateTrackers").disabled = disabled;
+      document.getElementById("btnEmptyTrackers").disabled = disabled;
+    }
+  }
+
+  // Search + Pagination
+  document.getElementById("searchInput").addEventListener("input", () => {
+    if(activeTab === "trackers") trackersPage = 1;
+    if(activeTab === "vendors") vendorsPage = 1;
+    applySearchAndPagination();
+  });
+
+  function applySearchAndPagination(){
+    const query = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+
+    if(activeTab === "trackers"){
+      paginateRows(
+        Array.from(document.querySelectorAll(".tracker-row")),
+        query,
+        trackersPage,
+        "trackersCount",
+        "trackersPage"
+      );
+    } else {
+      paginateRows(
+        Array.from(document.querySelectorAll(".vendor-row")),
+        query,
+        vendorsPage,
+        "vendorsCount",
+        "vendorsPage"
+      );
+    }
+  }
+
+  function paginateRows(rows, query, page, countElId, pageElId){
+    const filtered = rows.filter(r => (r.dataset.search || "").includes(query));
+
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const safePage = Math.min(Math.max(1, page), totalPages);
+
+    rows.forEach(r => r.style.display = "none");
+
+    const start = (safePage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    filtered.slice(start, end).forEach(r => r.style.display = "");
+
+    document.getElementById(countElId).textContent =
+      `Showing ${Math.min(PAGE_SIZE, Math.max(0, total - start))} of ${total} (page ${safePage}/${totalPages})`;
+    document.getElementById(pageElId).textContent = `Page ${safePage} / ${totalPages}`;
+
+    if(activeTab === "trackers") trackersPage = safePage;
+    if(activeTab === "vendors") vendorsPage = safePage;
+  }
+
+  document.getElementById("trackersPrev").addEventListener("click", () => {
+    trackersPage = Math.max(1, trackersPage - 1);
+    applySearchAndPagination();
+  });
+  document.getElementById("trackersNext").addEventListener("click", () => {
+    trackersPage = trackersPage + 1;
+    applySearchAndPagination();
+  });
+
+  document.getElementById("vendorsPrev").addEventListener("click", () => {
+    vendorsPage = Math.max(1, vendorsPage - 1);
+    applySearchAndPagination();
+  });
+  document.getElementById("vendorsNext").addEventListener("click", () => {
+    vendorsPage = vendorsPage + 1;
+    applySearchAndPagination();
+  });
+
+  applySearchAndPagination();
+
+  // Populate + Empty (empty all)
+  async function dbPopulate(which){
+    const ok = confirm("Populate database from seed CSV?");
+    if(!ok) return;
+
+    setBarStatus(which, "Populating...", "");
+    disableBarButtons(which, true);
+
+    try{
+      const res = await fetch(DB_POPULATE_URL, { method:"POST" });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok){
+        setBarStatus(which, data.error || data.details || "Populate failed", "err");
+        return;
+      }
+      setBarStatus(which, "Populated (reloading...)", "ok");
+      setTimeout(() => window.location.reload(), 450);
+    } catch(e){
+      setBarStatus(which, String(e), "err");
+    } finally {
+      disableBarButtons(which, false);
+    }
+  }
+
+  async function dbEmpty(which){
+    const ok = confirm("Empty ALL tables? (Trackers + Vendors)");
+    if(!ok) return;
+
+    setBarStatus(which, "Emptying...", "");
+    disableBarButtons(which, true);
+
+    try{
+      const res = await fetch(DB_EMPTY_URL, { method:"POST" });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok){
+        setBarStatus(which, data.error || data.details || "Empty failed", "err");
+        return;
+      }
+      setBarStatus(which, "Emptied (reloading...)", "ok");
+      setTimeout(() => window.location.reload(), 450);
+    } catch(e){
+      setBarStatus(which, String(e), "err");
+    } finally {
+      disableBarButtons(which, false);
+    }
+  }
+
+  document.getElementById("btnPopulateTrackers").addEventListener("click", () => dbPopulate("trackers"));
+  document.getElementById("btnEmptyTrackers").addEventListener("click", () => dbEmpty("trackers"));
+  document.getElementById("btnPopulateVendors").addEventListener("click", () => dbPopulate("vendors"));
+  document.getElementById("btnEmptyVendors").addEventListener("click", () => dbEmpty("vendors"));
+
+  // Trackers: Save + Delete
+  async function saveTrackerPurpose(trackerId){
+    const input = document.getElementById(`purpose-${trackerId}`);
+    const txt = (input?.value || "").trim();
+    if(!txt){ setStatus(`tstatus-${trackerId}`, "Purpose cannot be empty.", "err"); return; }
+
+    setStatus(`tstatus-${trackerId}`, "Saving...", "");
+    const res = await fetch(`/trackers/${trackerId}/purpose`, {
+      method:"PATCH",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ tracker_purpose: txt })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ setStatus(`tstatus-${trackerId}`, data.error || data.details || "Save failed", "err"); return; }
+    setStatus(`tstatus-${trackerId}`, "Saved", "ok");
+  }
+
+  async function deleteTracker(trackerId){
+    if(!confirm(`Delete tracker ${trackerId}?`)) return;
+
+    const res = await fetch(`/trackers/${trackerId}`, { method:"DELETE" });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){
+      alert(data.error || data.details || "Delete failed");
+      return;
+    }
+
+    const row = document.querySelector(`.tracker-row[data-tracker-id="${trackerId}"]`);
+    if(row) row.remove();
+    applySearchAndPagination();
+  }
+
+  // Vendors: Load + Save
+  async function loadVendors(){
+    const tbody = document.getElementById("vendorsTbody");
+    tbody.innerHTML = `<tr><td colspan="4" class="muted" style="padding:16px;">Loading vendors...</td></tr>`;
+
+    const res = await fetch(`/vendors?limit=1000`);
+    const vendors = await res.json().catch(()=>[]);
+
+    tbody.innerHTML = "";
+    for(const v of vendors){
+      const vendorId = v.vendor_id;
+      const name = v.vendor_name || "";
+      const desc = v.vendor_description || "";
+
+      const tr = document.createElement("tr");
+      tr.className = "vendor-row";
+      tr.dataset.search = `${name} ${desc}`.toLowerCase();
+
+      tr.innerHTML = `
+        <td><span class="pill mono">${vendorId}</span></td>
+        <td>${escapeHtml(name)}</td>
+        <td>
+          <input class="input" id="vdesc-${vendorId}" value="${escapeAttr(desc)}" placeholder="Set vendor description..." />
+          <div class="status" id="vstatus-${vendorId}"></div>
+        </td>
+        <td>
+          <div class="actions" data-vendor-id="${vendorId}">
+            <button class="btn btn-primary btn-vsave" type="button">Save</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  async function saveVendorDescription(vendorId){
+    const input = document.getElementById(`vdesc-${vendorId}`);
+    const txt = (input?.value || "").trim();
+    if(!txt){ setStatus(`vstatus-${vendorId}`, "Description cannot be empty.", "err"); return; }
+
+    setStatus(`vstatus-${vendorId}`, "Saving...", "");
+    const res = await fetch(`/vendors/${vendorId}/description`, {
+      method:"PATCH",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ vendor_description: txt })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ setStatus(`vstatus-${vendorId}`, data.error || data.details || "Save failed", "err"); return; }
+    setStatus(`vstatus-${vendorId}`, "Saved", "ok");
+  }
+
+  // Click delegation for per-row buttons
+  document.addEventListener("click", async (e) => {
+    const tSave = e.target.closest(".btn-tsave");
+    if(tSave){
+      const trackerId = Number(tSave.closest("[data-tracker-id]").dataset.trackerId);
+      await saveTrackerPurpose(trackerId);
+      return;
+    }
+
+    const tDel = e.target.closest(".btn-tdelete");
+    if(tDel){
+      const trackerId = Number(tDel.closest("[data-tracker-id]").dataset.trackerId);
+      await deleteTracker(trackerId);
+      return;
+    }
+
+    const vSave = e.target.closest(".btn-vsave");
+    if(vSave){
+      const vendorId = Number(vSave.closest("[data-vendor-id]").dataset.vendorId);
+      await saveVendorDescription(vendorId);
+      return;
+    }
+  });
+
+  // helpers
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+  function escapeAttr(s){
+    return escapeHtml(s).replace(/"/g, "&quot;");
+  }
+</script>
+</body>
+</html>
