@@ -37,7 +37,17 @@ pipeline {
         sh '''
         set -e
         export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-        export HOST_WORKSPACE="/Users/angela.madjar/Angela/Finki-Masters/DevOps/Homework-2/jenkins-agent/workspace/${JOB_NAME}"
+
+        # Map container workspace -> macOS host workspace
+        export HOST_WORKSPACE="$WORKSPACE"
+        export HOST_WORKSPACE="${HOST_WORKSPACE#/home/jenkins/agent}"
+        export HOST_WORKSPACE="/Users/angela.madjar/Angela/Finki-Masters/DevOps/Homework-2/jenkins-agent${HOST_WORKSPACE}"
+
+        echo "WORKSPACE=$WORKSPACE"
+        echo "HOST_WORKSPACE=$HOST_WORKSPACE"
+        ls -la "$HOST_WORKSPACE/deployment/nginx/default.conf"
+        ls -la "$HOST_WORKSPACE/deployment/smoke.sh"
+
         docker compose -f ${COMPOSE_FILE} up -d
         docker compose -f ${COMPOSE_FILE} run --rm smoke
         '''
@@ -46,13 +56,16 @@ pipeline {
         always {
         sh '''
             export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-            export HOST_WORKSPACE="/Users/angela.madjar/Angela/Finki-Masters/DevOps/Homework-2/jenkins-agent/workspace/${JOB_NAME}"
+
+            export HOST_WORKSPACE="$WORKSPACE"
+            export HOST_WORKSPACE="${HOST_WORKSPACE#/home/jenkins/agent}"
+            export HOST_WORKSPACE="/Users/angela.madjar/Angela/Finki-Masters/DevOps/Homework-2/jenkins-agent${HOST_WORKSPACE}"
+
             docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
         '''
         }
     }
     }
-
     stage("Publish image to Nexus") {
       steps {
         withCredentials([usernamePassword(
