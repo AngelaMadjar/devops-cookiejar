@@ -33,22 +33,23 @@ pipeline {
     }
 
     stage("Integration tests (compose + smoke)") {
-      steps {
+    steps {
         sh '''
-          set -e
-          export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-          docker compose -f ${COMPOSE_FILE} up -d
-          docker compose -f ${COMPOSE_FILE} run --rm smoke
+        set -e
+        export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+
+        docker compose --project-directory "$WORKSPACE" -f ${COMPOSE_FILE} up -d
+        docker compose --project-directory "$WORKSPACE" -f ${COMPOSE_FILE} run --rm smoke
         '''
-      }
-      post {
+    }
+    post {
         always {
-          sh '''
+        sh '''
             export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-            docker compose -f ${COMPOSE_FILE} down -v || true
-          '''
+            docker compose --project-directory "$WORKSPACE" -f ${COMPOSE_FILE} down -v --remove-orphans || true
+        '''
         }
-      }
+    }
     }
 
     stage("Publish image to Nexus") {
