@@ -1,6 +1,10 @@
 pipeline {
-  agent any
-  options { timestamps() }
+  agent { label 'docker' }
+
+  options {
+    timestamps()
+    skipDefaultCheckout(true)
+  }
 
   environment {
     NEXUS_DOCKER_REGISTRY = "nexus:8083"
