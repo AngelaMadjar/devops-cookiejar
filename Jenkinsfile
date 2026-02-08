@@ -18,7 +18,9 @@ pipeline {
 
   stages {
     stage("Checkout") {
-      steps { checkout scm }
+      steps {
+        checkout scm
+      }
     }
 
     stage("Build image") {
@@ -33,44 +35,29 @@ pipeline {
     }
 
     stage("Integration tests (compose + smoke)") {
-    steps {
+      steps {
         sh '''
-        set -e
-        export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+          set -e
+          export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 
-        # Map container workspace -> macOS host workspace
-        export HOST_WORKSPACE="$WORKSPACE"
-        export HOST_WORKSPACE="${HOST_WORKSPACE#/home/jenkins/agent}"
-        export HOST_WORKSPACE="/Users/angela.madjar/Angela/Finki-Masters/DevOps/Homework-2/jenkins-agent${HOST_WORKSPACE}"
-
-        echo "WORKSPACE=$WORKSPACE"
-        echo "HOST_WORKSPACE=$HOST_WORKSPACE"
-        ls -la "$HOST_WORKSPACE/deployment/nginx/default.conf"
-        ls -la "$HOST_WORKSPACE/deployment/smoke.sh"
-
-        docker compose -f ${COMPOSE_FILE} up -d
-        docker compose -f ${COMPOSE_FILE} run --rm smoke
+          docker compose --project-directory "$WORKSPACE" -f deployment/docker-compose.yml up -d
+          docker compose --project-directory "$WORKSPACE" -f deployment/docker-compose.yml run --rm smoke
         '''
-    }
-    post {
+      }
+      post {
         always {
-        sh '''
+          sh '''
             export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-
-            export HOST_WORKSPACE="$WORKSPACE"
-            export HOST_WORKSPACE="${HOST_WORKSPACE#/home/jenkins/agent}"
-            export HOST_WORKSPACE="/Users/angela.madjar/Angela/Finki-Masters/DevOps/Homework-2/jenkins-agent${HOST_WORKSPACE}"
-
-            docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
-        '''
+            docker compose --project-directory "$WORKSPACE" -f deployment/docker-compose.yml down -v --remove-orphans || true
+          '''
         }
-    }
+      }
     }
 
     stage("Publish image to Nexus") {
       steps {
         withCredentials([usernamePassword(
-          credentialsId: "${DOCKER_CREDS_ID}",
+          credentialsId: DOCKER_CREDS_ID,
           usernameVariable: "NEXUS_USER",
           passwordVariable: "NEXUS_PASS"
         )]) {
@@ -95,4 +82,3 @@ pipeline {
     }
   }
 }
-
