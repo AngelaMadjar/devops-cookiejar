@@ -37,16 +37,17 @@ pipeline {
         sh '''
         set -e
         export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-
-        docker compose --project-directory "$WORKSPACE" -f ${COMPOSE_FILE} up -d
-        docker compose --project-directory "$WORKSPACE" -f ${COMPOSE_FILE} run --rm smoke
+        export HOST_WORKSPACE="/Users/angela.madjar/Angela/Finki-Masters/DevOps/Homework-2/jenkins-agent/workspace/${JOB_NAME}"
+        docker compose -f ${COMPOSE_FILE} up -d
+        docker compose -f ${COMPOSE_FILE} run --rm smoke
         '''
     }
     post {
         always {
         sh '''
             export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-            docker compose --project-directory "$WORKSPACE" -f ${COMPOSE_FILE} down -v --remove-orphans || true
+            export HOST_WORKSPACE="/Users/angela.madjar/Angela/Finki-Masters/DevOps/Homework-2/jenkins-agent/workspace/${JOB_NAME}"
+            docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
         '''
         }
     }
