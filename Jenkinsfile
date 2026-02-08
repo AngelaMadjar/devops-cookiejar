@@ -42,6 +42,14 @@ pipeline {
       }
     }
 
+    stage("Build smoke image") {  
+        steps {
+        sh '''
+        docker build -t cookiejar-smoke:test deployment/smoke
+        '''
+    }
+    }
+
 
     stage("Integration tests (compose + smoke)") {
       steps {

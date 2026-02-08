@@ -63,13 +63,11 @@ services:
       - cookiejar-net
 
   smoke:
-    image: curlimages/curl:8.6.0
+    image: cookiejar-smoke:test
     depends_on:
       - nginx
     networks:
       - cookiejar-net
-    volumes:
-      - ./deployment/smoke.sh:/smoke.sh:ro
     entrypoint: ["/bin/sh", "/smoke.sh"]
 
 
