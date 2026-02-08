@@ -55,7 +55,7 @@ services:
   nginx:
     image: cookiejar-nginx:test
     ports:
-      - "8080:80"
+      - "8088:80"
     depends_on:
       - app_blue
       - app_green
