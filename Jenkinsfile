@@ -3,90 +3,95 @@ pipeline {
 
   options {
     timestamps()
-    skipDefaultCheckout(true)
   }
 
   environment {
-    NEXUS_DOCKER_REGISTRY = "http://nexus:8083"
-    DOCKER_CREDS_ID       = "nexus-creds"
-    IMAGE_REPO            = "cookiejar-api"
+    NEXUS_REGISTRY = "nexus:8083"
+    NEXUS_REPO     = "docker-hosted"
+    DOCKER_CREDS  = "nexus-creds"
 
-    COMPOSE_FILE          = "deployment/docker-compose.yml"
-    COMPOSE_PROJECT_NAME  = "cookiejar-ci-${BUILD_NUMBER}"
-    IMAGE_TAG             = "${BUILD_NUMBER}"
+    APP_IMAGE     = "cookiejar-api"
+    NGINX_IMAGE   = "cookiejar-nginx"
+    SMOKE_IMAGE   = "cookiejar-smoke"
+
+    IMAGE_TAG     = "${BUILD_NUMBER}"
+    COMPOSE_FILE  = "deployment/docker-compose.yml"
+    COMPOSE_PROJECT_NAME = "cookiejar-ci-${BUILD_NUMBER}"
   }
 
   stages {
+
     stage("Checkout") {
       steps {
         checkout scm
       }
     }
 
-    stage("Build image") {
+    stage("Build app images") {
       steps {
         sh '''
           set -e
-          docker build -t ${IMAGE_REPO}:${IMAGE_TAG} -f dockerfile .
-          docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${IMAGE_REPO}:blue
-          docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${IMAGE_REPO}:green
+          docker build -t ${APP_IMAGE}:${IMAGE_TAG} .
+          docker tag ${APP_IMAGE}:${IMAGE_TAG} ${APP_IMAGE}:blue
+          docker tag ${APP_IMAGE}:${IMAGE_TAG} ${APP_IMAGE}:green
         '''
       }
     }
 
-    stage("Build nginx image") {
-       steps {
+    stage("Build infra images") {
+      steps {
         sh '''
-        docker build -t cookiejar-nginx:test deployment/nginx
+          set -e
+          docker build -t ${NGINX_IMAGE}:${IMAGE_TAG} deployment/nginx
+          docker build -t ${SMOKE_IMAGE}:${IMAGE_TAG} deployment/smoke
         '''
       }
     }
 
-    stage("Build smoke image") {  
-        steps {
-        sh '''
-        docker build -t cookiejar-smoke:test deployment/smoke
-        '''
-    }
-    }
-
-
-    stage("Integration tests (compose + smoke)") {
+    stage("Integration tests (docker compose)") {
       steps {
         sh '''
           set -e
           export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 
-          docker compose --project-directory "$WORKSPACE" -f deployment/docker-compose.yml up -d
-          docker compose --project-directory "$WORKSPACE" -f deployment/docker-compose.yml run --rm smoke
+          docker compose --project-directory "$WORKSPACE" \
+            -f ${COMPOSE_FILE} up -d
+
+          docker compose --project-directory "$WORKSPACE" \
+            -f ${COMPOSE_FILE} run --rm smoke
         '''
       }
       post {
         always {
           sh '''
             export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-            docker compose --project-directory "$WORKSPACE" -f deployment/docker-compose.yml down -v --remove-orphans || true
+            docker compose --project-directory "$WORKSPACE" \
+              -f ${COMPOSE_FILE} down -v --remove-orphans || true
           '''
         }
       }
     }
 
-    stage("Publish image to Nexus") {
+    stage("Push images to Nexus") {
       steps {
         withCredentials([usernamePassword(
-          credentialsId: DOCKER_CREDS_ID,
+          credentialsId: DOCKER_CREDS,
           usernameVariable: "NEXUS_USER",
           passwordVariable: "NEXUS_PASS"
         )]) {
           sh '''
             set -e
-            echo "$NEXUS_PASS" | docker login ${NEXUS_DOCKER_REGISTRY} -u "$NEXUS_USER" --password-stdin
 
-            docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${NEXUS_DOCKER_REGISTRY}/${IMAGE_REPO}:${IMAGE_TAG}
-            docker push ${NEXUS_DOCKER_REGISTRY}/${IMAGE_REPO}:${IMAGE_TAG}
+            echo "$NEXUS_PASS" | docker login \
+              http://${NEXUS_REGISTRY} \
+              -u "$NEXUS_USER" --password-stdin
 
-            docker tag ${IMAGE_REPO}:${IMAGE_TAG} ${NEXUS_DOCKER_REGISTRY}/${IMAGE_REPO}:latest
-            docker push ${NEXUS_DOCKER_REGISTRY}/${IMAGE_REPO}:latest
+            for img in ${APP_IMAGE} ${NGINX_IMAGE} ${SMOKE_IMAGE}; do
+              docker tag $img:${IMAGE_TAG} \
+                ${NEXUS_REGISTRY}/${NEXUS_REPO}/$img:${IMAGE_TAG}
+              docker push \
+                ${NEXUS_REGISTRY}/${NEXUS_REPO}/$img:${IMAGE_TAG}
+            done
           '''
         }
       }
@@ -95,7 +100,7 @@ pipeline {
 
   post {
     always {
-      sh 'docker logout ${NEXUS_DOCKER_REGISTRY} || true'
+      sh 'docker logout http://${NEXUS_REGISTRY} || true'
     }
   }
 }
