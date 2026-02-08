@@ -34,6 +34,15 @@ pipeline {
       }
     }
 
+    stage("Build nginx image") {
+       steps {
+        sh '''
+        docker build -t cookiejar-nginx:test deployment/nginx
+        '''
+      }
+    }
+
+
     stage("Integration tests (compose + smoke)") {
       steps {
         sh '''

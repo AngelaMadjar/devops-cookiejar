@@ -53,11 +53,9 @@ services:
       - cookiejar-net
 
   nginx:
-    image: nginx:alpine
+    image: cookiejar-nginx:test
     ports:
       - "8080:80"
-    volumes:
-      - ./deployment/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - app_blue
       - app_green
