@@ -66,21 +66,29 @@ pipeline {
         }
       }
     }
-    stage("Debug Nexus /v2") {
+    stage("Debug Docker /v2") {
       steps {
-        sh '''
-          set -eux
-          echo "== DNS =="
-          getent hosts nexus || true
+        withCredentials([usernamePassword(
+          credentialsId: DOCKER_CREDS,
+          usernameVariable: "NEXUS_USER",
+          passwordVariable: "NEXUS_PASS"
+        )]) {
+          sh(label: 'debug-v2', script: """#!/bin/bash
+            set -euxo pipefail
 
-          echo "== Curl /v2 (no auth) =="
-          curl -i http://nexus:8083/v2/ || true
+            echo "== DNS =="
+            getent hosts nexus || true
 
-          echo "== Curl /v2 (basic auth) =="
-          curl -i -u "$NEXUS_USER:$NEXUS_PASS" http://nexus:8083/v2/ || true
-        '''
+            echo "== Curl /v2 (no auth) =="
+            curl -i http://nexus:8083/v2/ || true
+
+            echo "== Curl /v2 (basic auth) =="
+            curl -i -u "$NEXUS_USER:$NEXUS_PASS" http://nexus:8083/v2/ || true
+            """)
+        }
       }
     }
+
 
     stage("Push images to Nexus") {
       steps {
