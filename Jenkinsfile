@@ -66,6 +66,7 @@ pipeline {
         }
     }
     }
+
     stage("Publish image to Nexus") {
       steps {
         withCredentials([usernamePassword(
@@ -94,3 +95,4 @@ pipeline {
     }
   }
 }
+
