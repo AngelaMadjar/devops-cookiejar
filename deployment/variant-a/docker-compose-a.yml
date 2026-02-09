@@ -10,7 +10,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    networks: [cookiejar-net]
 
   migrate:
     image: cookiejar-api:${IMAGE_TAG}
@@ -21,7 +20,6 @@ services:
       db:
         condition: service_healthy
     command: sh -lc "flask db upgrade"
-    networks: [cookiejar-net]
 
   app:
     image: cookiejar-api:${IMAGE_TAG}
@@ -34,7 +32,3 @@ services:
         condition: service_completed_successfully
     ports:
       - "8080:8080"
-    networks: [cookiejar-net]
-
-networks:
-  cookiejar-net:
