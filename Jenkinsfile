@@ -51,10 +51,13 @@ sleep 10
 echo "== Integration tests =="
 
 # Basic reachability
-curl -fsS http://host.docker.internal:8080/trackers
+curl -fsS http://host.docker.internal:8080/version
 
 # DB integration
 curl -fsS -X POST http://host.docker.internal:8080/db/populate
+
+# Data verification
+curl -fsS http://host.docker.internal:8080/stats
 
 echo "Integration tests PASSED"
 '''
