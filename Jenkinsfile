@@ -51,13 +51,13 @@ sleep 10
 echo "== Integration tests =="
 
 # Basic reachability
-curl -fsS http://app:8080/version
+curl -fsS http://localhost:8080/version
 
 # DB integration
-curl -fsS -X POST http://app:8080/db/populate
+curl -fsS -X POST http://localhost:8080/db/populate
 
 # Data verification
-curl -fsS http://app:8080/stats
+curl -fsS http://localhost:8080/stats
 
 echo "Integration tests PASSED"
 '''

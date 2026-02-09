@@ -12,6 +12,8 @@ services:
       retries: 20
 
   app:
+    ports:
+      - "8080:8080"
     image: cookiejar-api:${IMAGE_TAG}
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
