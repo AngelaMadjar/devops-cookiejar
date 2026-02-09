@@ -1,65 +1,61 @@
 pipeline {
   agent { label 'docker' }
 
-  options {
-    timestamps()
-  }
+  options { timestamps() }
 
   environment {
-    // Nexus Docker registry (host-exposed)
+    // IMPORTANT: use a host-reachable name because the docker CLI talks to the host daemon via /var/run/docker.sock
+    // and the host daemon cannot resolve container-only DNS names like "nexus" on ci-net.
     NEXUS_REGISTRY = "host.docker.internal:8083"
     DOCKER_CREDS   = "nexus-creds"
 
-    APP_IMAGE     = "cookiejar-api"
-    IMAGE_TAG     = "${BUILD_NUMBER}"
+    APP_IMAGE   = "cookiejar-api"
+    NGINX_IMAGE = "cookiejar-nginx"
+    SMOKE_IMAGE = "cookiejar-smoke"
 
-    COMPOSE_FILE  = "deployment/docker-compose.yml"
+    IMAGE_TAG    = "${BUILD_NUMBER}"
+    COMPOSE_FILE = "deployment/docker-compose.yml"
     COMPOSE_PROJECT_NAME = "cookiejar-ci-${BUILD_NUMBER}"
   }
 
   stages {
 
     stage("Checkout") {
-      steps {
-        checkout scm
-      }
+      steps { checkout scm }
     }
 
-    stage("Build Docker image") {
+    stage("Build app images") {
       steps {
         sh '''#!/bin/bash
 set -euo pipefail
 docker build -t ${APP_IMAGE}:${IMAGE_TAG} .
+docker tag ${APP_IMAGE}:${IMAGE_TAG} ${APP_IMAGE}:blue
+docker tag ${APP_IMAGE}:${IMAGE_TAG} ${APP_IMAGE}:green
 '''
       }
     }
 
-    stage("Integration tests (containerized)") {
+    stage("Build infra images") {
       steps {
         sh '''#!/bin/bash
 set -euo pipefail
+docker build -t ${NGINX_IMAGE}:${IMAGE_TAG} deployment/nginx
+docker build -t ${SMOKE_IMAGE}:${IMAGE_TAG} deployment/smoke
+'''
+      }
+    }
 
-export IMAGE_TAG=${IMAGE_TAG}
+    stage("Integration tests (docker compose)") {
+      steps {
+        sh '''#!/bin/bash
+set -euo pipefail
 export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 
-# Start app + db in containers
-docker compose -f ${COMPOSE_FILE} up -d
+docker compose --project-directory "$WORKSPACE" \
+  -f ${COMPOSE_FILE} up -d
 
-# Wait a bit for the app to be reachable
-sleep 10
-
-echo "== Integration tests =="
-
-# Basic reachability
-curl -fsS http://localhost:8080/version
-
-# DB integration
-curl -fsS -X POST http://localhost:8080/db/populate
-
-# Data verification
-curl -fsS http://localhost:8080/stats
-
-echo "Integration tests PASSED"
+docker compose --project-directory "$WORKSPACE" \
+  -f ${COMPOSE_FILE} run --rm smoke
 '''
       }
       post {
@@ -67,13 +63,27 @@ echo "Integration tests PASSED"
           sh '''#!/bin/bash
 set +e
 export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
+docker compose --project-directory "$WORKSPACE" \
+  -f ${COMPOSE_FILE} down -v --remove-orphans || true
 '''
         }
       }
     }
 
-    stage("Push image to Nexus") {
+    // Optional but recommended while you're validating the setup
+    stage("Debug Nexus Docker endpoint") {
+      steps {
+        sh '''#!/bin/bash
+set -euo pipefail
+echo "== DNS inside agent container =="
+getent hosts nexus || true
+echo "== Nexus Docker endpoint from agent (host-exposed) =="
+curl -i http://${NEXUS_REGISTRY}/v2/ || true
+'''
+      }
+    }
+
+    stage("Push images to Nexus") {
       steps {
         withCredentials([usernamePassword(
           credentialsId: DOCKER_CREDS,
@@ -83,15 +93,13 @@ docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
           sh '''#!/bin/bash
 set -euo pipefail
 
-echo "$NEXUS_PASS" | docker login \
-  --username "$NEXUS_USER" \
-  --password-stdin \
-  http://${NEXUS_REGISTRY}
+# Explicit http:// avoids client confusion with insecure registries
+echo "$NEXUS_PASS" | docker login --username "$NEXUS_USER" --password-stdin http://${NEXUS_REGISTRY}
 
-docker tag ${APP_IMAGE}:${IMAGE_TAG} \
-  ${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}
-
-docker push ${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}
+for img in ${APP_IMAGE} ${NGINX_IMAGE} ${SMOKE_IMAGE}; do
+  docker tag $img:${IMAGE_TAG} ${NEXUS_REGISTRY}/$img:${IMAGE_TAG}
+  docker push ${NEXUS_REGISTRY}/$img:${IMAGE_TAG}
+done
 '''
         }
       }
