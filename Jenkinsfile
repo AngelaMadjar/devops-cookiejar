@@ -13,7 +13,7 @@ pipeline {
     APP_IMAGE     = "cookiejar-api"
     IMAGE_TAG     = "${BUILD_NUMBER}"
 
-    COMPOSE_FILE  = "docker-compose.yml"
+    COMPOSE_FILE  = "deployment/docker-compose.yml"
     COMPOSE_PROJECT_NAME = "cookiejar-ci-${BUILD_NUMBER}"
   }
 
