@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [cookiejar-net]
+
+  migrate:
+    image: cookiejar-api:${IMAGE_TAG}
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
+      FLASK_APP: app.py
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -lc "flask db upgrade"
+    networks: [cookiejar-net]
+
+  app:
+    image: cookiejar-api:${IMAGE_TAG}
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
+      APP_COLOR: blue
+      APP_VERSION: "1.0.0"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [cookiejar-net]
+
+  nginx:
+    image: cookiejar-nginx:${IMAGE_TAG}
+    ports:
+      - "8088:80"
+    depends_on: [app]
+    networks: [cookiejar-net]
+
+networks:
+  cookiejar-net:
