@@ -25,7 +25,7 @@ def create_app(config_class):
     migrate.init_app(app, db)
 
     # Creating db upon app creation for the sake of simplicity for this homework
-    with app.app_context():
-        db.create_all()
+    # with app.app_context():
+    #     db.create_all()
 
     return app
