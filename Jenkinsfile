@@ -15,7 +15,7 @@ pipeline {
     COMPOSE_PROJECT_NAME = "cookiejar-ci-${BUILD_NUMBER}"
 
     // Nginx is exposed on the host (from compose)
-    BASE_URL = "http://host.docker.internal:8088"
+    BASE_URL = "http://host.docker.internal:8080"
   }
 
   stages {
