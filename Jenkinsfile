@@ -72,6 +72,7 @@ docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
         }
       }
     }
+    
 
     stage("Push image to Nexus") {
       steps {
