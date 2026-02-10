@@ -51,7 +51,7 @@ sleep 10
 echo "== Integration tests =="
 
 # Basic reachability
-curl -fsS http://host.docker.internal:8080/health
+curl -fsS http://host.docker.internal:8080/version
 
 # DB integration
 curl -fsS -X POST http://host.docker.internal:8080/db/populate
@@ -72,7 +72,7 @@ docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
         }
       }
     }
-    
+
 
     stage("Push image to Nexus") {
       steps {
