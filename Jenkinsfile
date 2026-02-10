@@ -1,5 +1,7 @@
 pipeline {
-  agent { label 'docker' }
+  agent {
+    label 'docker'
+  }
 
   options {
     timestamps()
@@ -8,12 +10,12 @@ pipeline {
   environment {
     // Nexus Docker registry (host-exposed)
     NEXUS_REGISTRY = "host.docker.internal:8083"
-    DOCKER_CREDS   = "nexus-creds"
+    DOCKER_CREDS = "nexus-creds"
 
-    APP_IMAGE     = "cookiejar-api"
-    IMAGE_TAG     = "${BUILD_NUMBER}"
+    APP_IMAGE = "cookiejar-api"
+    IMAGE_TAG = "${BUILD_NUMBER}"
 
-    COMPOSE_FILE  = "deployment/docker-compose.yml"
+    COMPOSE_FILE = "deployment/docker-compose.yml"
     COMPOSE_PROJECT_NAME = "cookiejar-ci-${BUILD_NUMBER}"
   }
 
@@ -27,52 +29,73 @@ pipeline {
 
     stage("Build Docker image") {
       steps {
-        sh '''#!/bin/bash
-set -euo pipefail
-docker build -t ${APP_IMAGE}:${IMAGE_TAG} .
-'''
+        sh ''
+        '#!/bin/bash
+        set - euo pipefail
+        docker build - t $ {
+          APP_IMAGE
+        }: $ {
+          IMAGE_TAG
+        }.
+        ''
+        '
       }
     }
 
     stage("Integration tests (containerized)") {
       steps {
-        sh '''#!/bin/bash
-set -euo pipefail
+        sh ''
+        '#!/bin/bash
+        set - euo pipefail
 
-export IMAGE_TAG=${IMAGE_TAG}
-export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+        export IMAGE_TAG = $ {
+          IMAGE_TAG
+        }
+        export COMPOSE_PROJECT_NAME = $ {
+          COMPOSE_PROJECT_NAME
+        }
 
-# Start app + db in containers
-docker compose -f ${COMPOSE_FILE} up -d
+        # Start app + db in containers
+        docker compose - f $ {
+          COMPOSE_FILE
+        }
+        up - d
 
-# Wait a bit for the app to be reachable
-sleep 10
+        # Wait a bit
+        for the app to be reachable
+        sleep 10
 
-echo "== Integration tests =="
+        echo "== Integration tests =="
 
-# Basic reachability
-curl -fsS http://host.docker.internal:8080/version
+        # Basic reachability
+        curl - fsS http: //host.docker.internal:8080/health
 
-# DB integration
-curl -fsS -X POST http://host.docker.internal:8080/db/populate
+          # DB integration
+        curl - fsS - X POST http: //host.docker.internal:8080/db/populate
 
-# Data verification
-curl -fsS http://host.docker.internal:8080/stats
+          # Data verification
+        curl - fsS http: //host.docker.internal:8080/stats
 
-echo "Integration tests PASSED"
-'''
+          echo "Integration tests PASSED"
+        ''
+        '
       }
       post {
         always {
-          sh '''#!/bin/bash
-set +e
-export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
-'''
+          sh ''
+          '#!/bin/bash
+          set + e
+          export COMPOSE_PROJECT_NAME = $ {
+            COMPOSE_PROJECT_NAME
+          }
+          docker compose - f $ {
+            COMPOSE_FILE
+          }
+          down - v--remove - orphans || true ''
+          '
         }
       }
     }
-
 
     stage("Push image to Nexus") {
       steps {
@@ -81,19 +104,31 @@ docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
           usernameVariable: "NEXUS_USER",
           passwordVariable: "NEXUS_PASS"
         )]) {
-          sh '''#!/bin/bash
-set -euo pipefail
+          sh ''
+          '#!/bin/bash
+          set - euo pipefail
 
-echo "$NEXUS_PASS" | docker login \
-  --username "$NEXUS_USER" \
-  --password-stdin \
-  http://${NEXUS_REGISTRY}
+          echo "$NEXUS_PASS" | docker login\
+            --username "$NEXUS_USER"\
+            --password - stdin\
+          http: //${NEXUS_REGISTRY}
 
-docker tag ${APP_IMAGE}:${IMAGE_TAG} \
-  ${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}
+            docker tag $ {
+              APP_IMAGE
+            }: $ {
+              IMAGE_TAG
+            }\
+          $ {
+            NEXUS_REGISTRY
+          }
+          /${APP_IMAGE}:${IMAGE_TAG}
 
-docker push ${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}
-'''
+          docker push $ {
+            NEXUS_REGISTRY
+          }
+          /${APP_IMAGE}:${IMAGE_TAG}
+          ''
+          '
         }
       }
     }
@@ -101,10 +136,14 @@ docker push ${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}
 
   post {
     always {
-      sh '''#!/bin/bash
-set +e
-docker logout ${NEXUS_REGISTRY} || true
-'''
+      sh ''
+      '#!/bin/bash
+      set + e
+      docker logout $ {
+        NEXUS_REGISTRY
+      } || true
+        ''
+      '
     }
   }
 }
