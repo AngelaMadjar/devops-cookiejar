@@ -42,7 +42,7 @@ docker compose --project-directory "$WORKSPACE" -f ${COMPOSE_FILE} up -d
 
 # Wait until nginx answers (better than sleep)
 for i in {1..30}; do
-  if curl -fsS ${BASE_URL}/version >/dev/null; then
+  if curl -fsS ${BASE_URL}/health >/dev/null; then
     echo "Nginx is up"
     break
   fi
