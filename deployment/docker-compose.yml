@@ -5,19 +5,23 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
-    networks:
-      - cookiejar-net
+    networks: [cookiejar-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
 
   app:
     image: cookiejar-api:${IMAGE_TAG}
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8080:8080"
-    networks:
-      - cookiejar-net
+    networks: [cookiejar-net]
 
 networks:
   cookiejar-net:
