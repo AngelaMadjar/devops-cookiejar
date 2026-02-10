@@ -1,25 +1,31 @@
 pipeline {
   agent { label 'docker' }
-  options { timestamps() }
+
+  options {
+    timestamps()
+  }
 
   environment {
+    // Nexus Docker registry (host-exposed)
+    NEXUS_REGISTRY = "host.docker.internal:8083"
+    DOCKER_CREDS   = "nexus-creds"
+
     APP_IMAGE     = "cookiejar-api"
     IMAGE_TAG     = "${BUILD_NUMBER}"
 
     COMPOSE_FILE  = "deployment/docker-compose.yml"
     COMPOSE_PROJECT_NAME = "cookiejar-ci-${BUILD_NUMBER}"
-
-    // Optional if you push later
-    NEXUS_REGISTRY = "host.docker.internal:8083"
-    DOCKER_CREDS   = "nexus-creds"
   }
 
   stages {
+
     stage("Checkout") {
-      steps { checkout scm }
+      steps {
+        checkout scm
+      }
     }
 
-    stage("Build image") {
+    stage("Build Docker image") {
       steps {
         sh '''#!/bin/bash
 set -euo pipefail
@@ -28,48 +34,30 @@ docker build -t ${APP_IMAGE}:${IMAGE_TAG} .
       }
     }
 
-    stage("Integration tests (compose network)") {
+    stage("Integration tests (containerized)") {
       steps {
         sh '''#!/bin/bash
 set -euo pipefail
 
-export IMAGE_TAG="${IMAGE_TAG}"
-export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME}"
+export IMAGE_TAG=${IMAGE_TAG}
+export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 
-# Bring up stack (db + app)
-docker compose --project-directory "$WORKSPACE" -f "${COMPOSE_FILE}" up -d
+# Start app + db in containers
+docker compose -f ${COMPOSE_FILE} up -d
 
-# Compute the actual compose network name (project + network)
-NET="${COMPOSE_PROJECT_NAME}_cookiejar-net"
-
-echo "Using network: $NET"
-docker network inspect "$NET" >/dev/null
-
-echo "== Wait for app health =="
-# Wait for the app to respond on its internal port from inside the compose network
-for i in {1..60}; do
-  if docker run --rm --network "$NET" curlimages/curl:8.6.0 -fsS "http://app:8080/health" >/dev/null; then
-    echo "App is up"
-    break
-  fi
-
-  # Helpful debug every 10 tries
-  if (( i % 10 == 0 )); then
-    echo "Still waiting... (try $i)"
-    docker compose --project-directory "$WORKSPACE" -f "${COMPOSE_FILE}" ps || true
-    docker compose --project-directory "$WORKSPACE" -f "${COMPOSE_FILE}" logs --tail=80 app || true
-  fi
-
-  sleep 2
-done
-
-# Fail hard if it never came up
-docker run --rm --network "$NET" curlimages/curl:8.6.0 -fsS "http://app:8080/health" >/dev/null
+# Wait a bit for the app to be reachable
+sleep 10
 
 echo "== Integration tests =="
-docker run --rm --network "$NET" curlimages/curl:8.6.0 -fsS "http://app:8080/health"
-docker run --rm --network "$NET" curlimages/curl:8.6.0 -fsS -X POST "http://app:8080/db/populate"
-docker run --rm --network "$NET" curlimages/curl:8.6.0 -fsS "http://app:8080/stats"
+
+# Basic reachability
+curl -fsS http://host.docker.internal:8080/health
+
+# DB integration
+curl -fsS -X POST http://host.docker.internal:8080/db/populate
+
+# Data verification
+curl -fsS http://host.docker.internal:8080/stats
 
 echo "Integration tests PASSED"
 '''
@@ -78,16 +66,14 @@ echo "Integration tests PASSED"
         always {
           sh '''#!/bin/bash
 set +e
-export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME}"
-docker compose --project-directory "$WORKSPACE" -f "${COMPOSE_FILE}" down -v --remove-orphans || true
+export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
 '''
         }
       }
     }
 
-    // Optional push stage — keep/remove as needed
-    stage("Push image to Nexus (optional)") {
-      when { expression { return env.DOCKER_CREDS?.trim() } }
+    stage("Push image to Nexus") {
       steps {
         withCredentials([usernamePassword(
           credentialsId: DOCKER_CREDS,
@@ -100,10 +86,12 @@ set -euo pipefail
 echo "$NEXUS_PASS" | docker login \
   --username "$NEXUS_USER" \
   --password-stdin \
-  "http://${NEXUS_REGISTRY}"
+  http://${NEXUS_REGISTRY}
 
-docker tag "${APP_IMAGE}:${IMAGE_TAG}" "${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}"
-docker push "${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}"
+docker tag ${APP_IMAGE}:${IMAGE_TAG} \
+  ${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}
+
+docker push ${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}
 '''
         }
       }
@@ -114,7 +102,7 @@ docker push "${NEXUS_REGISTRY}/${APP_IMAGE}:${IMAGE_TAG}"
     always {
       sh '''#!/bin/bash
 set +e
-docker logout "${NEXUS_REGISTRY}" || true
+docker logout ${NEXUS_REGISTRY} || true
 '''
     }
   }
