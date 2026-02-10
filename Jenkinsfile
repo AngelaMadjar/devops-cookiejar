@@ -50,7 +50,7 @@ for i in {1..30}; do
 done
 
 echo "== Integration tests =="
-curl -fsS ${BASE_URL}/version
+curl -fsS ${BASE_URL}/health
 curl -fsS -X POST ${BASE_URL}/db/populate
 curl -fsS ${BASE_URL}/stats
 
