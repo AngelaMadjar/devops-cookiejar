@@ -31,7 +31,7 @@ pipeline {
         sh '''#!/bin/bash
 set -euo pipefail
 docker build -t ${APP_IMAGE}:${IMAGE_TAG} .
-docker build -t ${NGINX_IMAGE}:${IMAGE_TAG} ./nginx
+docker build -t ${NGINX_IMAGE}:${IMAGE_TAG} deployment/nginx
 '''
       }
     }
