@@ -16,8 +16,6 @@ services:
     image: cookiejar-api:${IMAGE_TAG}
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
-      APP_COLOR: blue
-      APP_VERSION: ${IMAGE_TAG}
     depends_on:
       db:
         condition: service_healthy
