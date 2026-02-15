@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-BASE_URL= "http://nginx" # "${BASE_URL:-http://host.docker.internal:8088}" 
+BASE_URL= "http://host.docker.internal:8088" 
 
 fail() {
   echo "SMOKE TEST FAILED: $1" >&2
