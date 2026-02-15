@@ -53,16 +53,16 @@ sleep 10
 echo "== Integration tests =="
 
 # Basic reachability
-curl -fsS http://host.docker.internal:8080/health
+curl -fsS http://host.docker.internal:8088/health
 
 # Version test
-curl -fsS http://host.docker.internal:8080/version | grep -q '"color":"green"'
+curl -fsS http://host.docker.internal:8088/version | grep -q '"color":"green"'
 
 # DB integration
-curl -fsS -X POST http://host.docker.internal:8080/db/populate
+curl -fsS -X POST http://host.docker.internal:8088/db/populate
 
 # Data verification
-curl -fsS http://host.docker.internal:8080/stats
+curl -fsS http://host.docker.internal:8088/stats
 
 echo "Integration tests PASSED"
 '''
