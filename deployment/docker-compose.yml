@@ -45,6 +45,15 @@ services:
     networks:
       - cookiejar-net
 
+  smoke:
+    image: cookiejar-smoke:${IMAGE_TAG}
+    depends_on:
+      - nginx
+    networks:
+      - cookiejar-net
+    entrypoint: ["/bin/sh", "/smoke.sh"]
+
+
 networks:
   cookiejar-net:
 

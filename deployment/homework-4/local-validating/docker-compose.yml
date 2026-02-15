@@ -13,7 +13,7 @@ services:
     networks: [cookiejar-net]
 
   migrate:
-    image: cookiejar-api:67
+    image: cookiejar-api:68
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
       FLASK_APP: app.py
@@ -26,11 +26,11 @@ services:
       sh -lc "flask db upgrade"
 
   app_blue:
-    image: cookiejar-api:57
+    image: cookiejar-api:67
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
       APP_COLOR: blue
-      APP_VERSION: "57"
+      APP_VERSION: "67"
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -38,11 +38,11 @@ services:
       - cookiejar-net
 
   app_green:
-    image: cookiejar-api:67
+    image: cookiejar-api:68
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
       APP_COLOR: green
-      APP_VERSION: "67"
+      APP_VERSION: "68"
     depends_on:
       migrate:
         condition: service_completed_successfully
