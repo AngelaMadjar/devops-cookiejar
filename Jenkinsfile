@@ -11,6 +11,7 @@ pipeline {
     DOCKER_CREDS   = "nexus-creds"
 
     APP_IMAGE     = "cookiejar-api"
+    NGINX_IMAGE = "cookiejar-nginx" // Homework 4
     IMAGE_TAG     = "${BUILD_NUMBER}"
 
     COMPOSE_FILE  = "deployment/docker-compose.yml"
@@ -25,11 +26,12 @@ pipeline {
       }
     }
 
-    stage("Build Docker image") {
+    stage("Build Docker image") { // Homework 4: building nginx image as well
       steps {
         sh '''#!/bin/bash
 set -euo pipefail
 docker build -t ${APP_IMAGE}:${IMAGE_TAG} .
+docker build -t ${NGINX_IMAGE}:${IMAGE_TAG} ./nginx
 '''
       }
     }
@@ -52,6 +54,9 @@ echo "== Integration tests =="
 
 # Basic reachability
 curl -fsS http://host.docker.internal:8080/health
+
+# Version test
+curl -fsS http://host.docker.internal:8080/version | grep -q '"color":"green"'
 
 # DB integration
 curl -fsS -X POST http://host.docker.internal:8080/db/populate
