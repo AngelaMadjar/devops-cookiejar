@@ -12,6 +12,8 @@ pipeline {
 
     APP_IMAGE     = "cookiejar-api"
     NGINX_IMAGE = "cookiejar-nginx" // Homework 4
+    SMOKE_IMAGE = "cookiejar-smoke" // Homework 4
+
     IMAGE_TAG     = "${BUILD_NUMBER}"
 
     COMPOSE_FILE  = "deployment/docker-compose.yml"
@@ -32,51 +34,39 @@ pipeline {
 set -euo pipefail
 docker build -t ${APP_IMAGE}:${IMAGE_TAG} .
 docker build -t ${NGINX_IMAGE}:${IMAGE_TAG} deployment/nginx
+docker build -t ${SMOKE_IMAGE}:${IMAGE_TAG} deployment/smoke 
+
 '''
       }
     }
 
-    stage("Integration tests (containerized)") {
-      steps {
-        sh '''#!/bin/bash
+stage("Integration tests (smoke container)") {
+  steps {
+    sh '''#!/bin/bash
 set -euo pipefail
 
 export IMAGE_TAG=${IMAGE_TAG}
 export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 
-# Start app + db in containers
-docker compose -f ${COMPOSE_FILE} up -d
+# Start dependencies
+docker compose -f ${COMPOSE_FILE} up -d db migrate app nginx
 
-# Wait a bit for the app to be reachable
-sleep 10
-
-echo "== Integration tests =="
-
-# Basic reachability
-curl -fsS http://host.docker.internal:8088/health
-
-# Version test
-curl -fsS http://host.docker.internal:8088/version | grep -q '"color":"green"'
-
-# DB integration
-curl -fsS -X POST http://host.docker.internal:8088/db/populate
-
-# Data verification
-curl -fsS http://host.docker.internal:8088/stats
-
-echo "Integration tests PASSED"
+# Run smoke tests as a one-off container.
+# --exit-code-from makes compose return the smoke container exit code.
+docker compose -f ${COMPOSE_FILE} up --no-deps --abort-on-container-exit --exit-code-from smoke smoke
 '''
-      }
-      post {
-        always {
-          sh '''#!/bin/bash
+  }
+  post {
+    always {
+      sh '''#!/bin/bash
 set +e
 export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
 docker compose -f ${COMPOSE_FILE} down -v --remove-orphans || true
 '''
-        }
-      }
     }
+  }
+}
+
 
 
     stage("Push image to Nexus") {
