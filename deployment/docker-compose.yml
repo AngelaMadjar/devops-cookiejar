@@ -38,8 +38,8 @@ services:
 
   nginx:
     image: cookiejar-nginx:${IMAGE_TAG}
-    ports:
-      - "8088:80"
+    # ports:
+    #   - "8088:80"
     depends_on:
       - app
     networks:
