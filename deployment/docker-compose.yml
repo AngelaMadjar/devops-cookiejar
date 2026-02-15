@@ -37,6 +37,7 @@ services:
       - cookiejar-net
 
   nginx:
+    build: ./nginx
     image: cookiejar-nginx:${IMAGE_TAG}
     ports:
       - "8088:80"
