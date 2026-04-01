@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_TAG: ci
+      GHCR_NAMESPACE: angelamadjar
 
     steps:
       - name: Checkout repository
@@ -54,19 +55,19 @@ jobs:
 
       - name: Tag app image for GHCR
         if: github.event_name == 'push'
-        run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:${{ github.sha }}
+        run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-api:${{ github.sha }}
 
       - name: Tag nginx image for GHCR
         if: github.event_name == 'push'
-        run: docker tag cookiejar-nginx:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-nginx:${{ github.sha }}
+        run: docker tag cookiejar-nginx:${IMAGE_TAG} ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-nginx:${{ github.sha }}
 
       - name: Push app image to GHCR
         if: github.event_name == 'push'
-        run: docker push ghcr.io/angelamadjar/cookiejar-api:${{ github.sha }}
+        run: docker push ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-api:${{ github.sha }}
 
       - name: Push nginx image to GHCR
         if: github.event_name == 'push'
-        run: docker push ghcr.io/angelamadjar/cookiejar-nginx:${{ github.sha }}
+        run: docker push ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-nginx:${{ github.sha }}
 
       - name: Show container logs on failure
         if: failure()
