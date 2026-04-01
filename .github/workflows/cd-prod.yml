@@ -23,11 +23,19 @@ jobs:
           docker pull ghcr.io/angelamadjar/cookiejar-api:prod || true
           docker pull ghcr.io/angelamadjar/cookiejar-nginx:prod || true
 
-      - name: Restart prod stack
+      # - name: Restart prod stack
+      #   run: |
+      #     export APP_VERSION=prod-${{ github.event.workflow_run.head_sha }}
+      #     docker compose -f deployment/homework-5/prod/docker-compose.prod.yml down -v --remove-orphans
+      #     docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d
+
+      - name: Redeploy prod app stack
         run: |
-          export APP_VERSION=prod-${{ github.event.workflow_run.head_sha }}
-          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml down -v --remove-orphans
-          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d
+          export APP_VERSION=prod-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
+          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml pull app nginx migrate
+          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d db
+          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up migrate
+          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d --force-recreate app nginx
 
       - name: Verify deployment
         run: |

@@ -48,4 +48,4 @@ networks:
   cookiejar-net:
 
 volumes:
-  cookiejar_pgdata:
+  cookiejar_pgdata_dev:

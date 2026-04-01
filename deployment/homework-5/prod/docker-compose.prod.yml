@@ -47,3 +47,6 @@ services:
 
 networks:
   cookiejar-net:
+
+volumes:
+  cookiejar_pgdata_prod:
