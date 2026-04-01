@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    networks:
+      - cookiejar-net
+
+  migrate:
+    image: ghcr.io/angelamadjar/cookiejar-api:dev
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
+      FLASK_APP: app.py
+    depends_on:
+      - db
+    command: sh -lc "flask db upgrade"
+    networks:
+      - cookiejar-net
+  app:
+    image: ghcr.io/angelamadjar/cookiejar-api:dev
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
+      APP_COLOR: green
+      APP_VERSION: ${APP_VERSION}
+    depends_on:
+      - migrate
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\" || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - cookiejar-net
+
+  nginx:
+    image: ghcr.io/angelamadjar/cookiejar-nginx:dev
+    ports:
+      - "8088:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - cookiejar-net
+
+networks:
+  cookiejar-net:
+
+volumes:
+  cookiejar_pgdata:

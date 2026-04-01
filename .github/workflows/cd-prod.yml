@@ -1,0 +1,36 @@
+name: Deploy to Prod (Mac)
+
+on:
+  workflow_run:
+    workflows: ["Homework 5 CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    environment: production
+    runs-on: [self-hosted, macOS, ARM64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Pull latest prod images
+        run: |
+          docker pull ghcr.io/angelamadjar/cookiejar-api:prod || true
+          docker pull ghcr.io/angelamadjar/cookiejar-nginx:prod || true
+
+      - name: Restart prod stack
+        run: |
+          export APP_VERSION=prod-${{ github.event.workflow_run.head_sha }}
+          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml down -v --remove-orphans
+          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d
+
+      - name: Verify deployment
+        run: |
+          sleep 10
+          curl -fsS http://localhost:8089/health
+          curl -fsS http://localhost:8089/version
