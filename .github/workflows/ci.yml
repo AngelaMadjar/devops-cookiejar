@@ -1,0 +1,78 @@
+name: Homework 5 CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ci
+      GHCR_NAMESPACE: angelamadjar
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build app image
+        run: docker build -t cookiejar-api:${IMAGE_TAG} -f dockerfile .
+
+      - name: Build nginx image
+        run: docker build -t cookiejar-nginx:${IMAGE_TAG} -f deployment/nginx/Dockerfile deployment/nginx
+
+      - name: Start Homework 5 stack
+        run: docker compose -f deployment/homework-5/docker-compose.yml up -d
+
+      - name: Wait for application to become available
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8088/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Application did not become ready in time"
+          docker compose -f deployment/homework-5/docker-compose.yml logs
+          exit 1
+
+      - name: Run integration tests
+        run: |
+          curl -fsS http://localhost:8088/health
+          curl -fsS http://localhost:8088/version | grep -q '"color":"green"'
+          curl -fsS -X POST http://localhost:8088/db/populate
+          curl -fsS http://localhost:8088/stats
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Tag app image for GHCR
+        if: github.event_name == 'push'
+        run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-api:${{ github.sha }}
+
+      - name: Tag nginx image for GHCR
+        if: github.event_name == 'push'
+        run: docker tag cookiejar-nginx:${IMAGE_TAG} ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-nginx:${{ github.sha }}
+
+      - name: Push app image to GHCR
+        if: github.event_name == 'push'
+        run: docker push ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-api:${{ github.sha }}
+
+      - name: Push nginx image to GHCR
+        if: github.event_name == 'push'
+        run: docker push ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-nginx:${{ github.sha }}
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose -f deployment/homework-5/docker-compose.yml logs
+
+      - name: Stop stack
+        if: always()
+        run: docker compose -f deployment/homework-5/docker-compose.yml down -v --remove-orphans
