@@ -4,12 +4,11 @@ on:
   workflow_run:
     workflows: ["Homework 5 CI"]
     types: [completed]
+    branches: [dev]
 
 jobs:
   deploy:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'dev'
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: [self-hosted, macOS, ARM64]
 
     steps:
