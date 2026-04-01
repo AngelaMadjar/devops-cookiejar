@@ -1,16 +1,22 @@
 name: Deploy to Dev (Mac)
 
 on:
-  push:
-    branches: [dev]
+  workflow_run:
+    workflows: ["Homework 5 CI"]
+    types: [completed]
 
 jobs:
   deploy:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'dev'
     runs-on: [self-hosted, macOS, ARM64]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Pull latest images
         run: |
@@ -19,7 +25,7 @@ jobs:
 
       - name: Restart dev stack
         run: |
-          export APP_VERSION=dev-${GITHUB_SHA::8}
+          export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
           docker compose -f deployment/homework-5/dev/docker-compose.dev.yml down -v --remove-orphans
           docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d
 

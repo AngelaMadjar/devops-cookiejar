@@ -1,19 +1,23 @@
 name: Deploy to Prod (Mac)
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["Homework 5 CI"]
+    types: [completed]
 
 jobs:
   deploy:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
     environment: production
-
     runs-on: [self-hosted, macOS, ARM64]
-    
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Pull latest prod images
         run: |
@@ -22,7 +26,7 @@ jobs:
 
       - name: Restart prod stack
         run: |
-          export APP_VERSION=prod-${GITHUB_SHA::8}
+          export APP_VERSION=prod-${{ github.event.workflow_run.head_sha }}
           docker compose -f deployment/homework-5/prod/docker-compose.prod.yml down -v --remove-orphans
           docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d
 
@@ -31,4 +35,3 @@ jobs:
           sleep 10
           curl -fsS http://localhost:8089/health
           curl -fsS http://localhost:8089/version
-
