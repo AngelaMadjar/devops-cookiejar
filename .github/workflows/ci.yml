@@ -85,6 +85,22 @@ jobs:
         if: github.event_name == 'push' && github.ref_name == 'dev'
         run: docker push ghcr.io/angelamadjar/cookiejar-nginx:dev
 
+      - name: Tag app image as prod
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:prod
+
+      - name: Tag nginx image as prod
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: docker tag cookiejar-nginx:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-nginx:prod
+
+      - name: Push app image prod tag
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: docker push ghcr.io/angelamadjar/cookiejar-api:prod
+
+      - name: Push nginx image prod tag
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        run: docker push ghcr.io/angelamadjar/cookiejar-nginx:prod
+
       - name: Show container logs on failure
         if: failure()
         run: docker compose -f deployment/homework-5/docker-compose.yml logs
