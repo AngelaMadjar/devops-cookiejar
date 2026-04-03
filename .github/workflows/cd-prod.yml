@@ -15,6 +15,10 @@ jobs:
     env:
       IMAGE_TAG: ${{ github.event.pull_request.head.sha }}
       APP_VERSION: prod-${{ github.event.pull_request.head.sha }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      DATABASE_URL: postgresql+psycopg2://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:5432/${{ secrets.POSTGRES_DB }}
 
     steps:
       - name: Checkout repository
