@@ -15,18 +15,25 @@ jobs:
     environment: production
     runs-on: [self-hosted, macOS, ARM64]
 
+    env:
+      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+      APP_VERSION: prod-${{ github.event.workflow_run.head_sha }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Pull latest prod images
         run: |
-          docker pull ghcr.io/angelamadjar/cookiejar-api:prod || true
-          docker pull ghcr.io/angelamadjar/cookiejar-nginx:prod || true
+          docker pull ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
+          docker pull ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
 
-      # - name: Restart prod stack
+      # - name: Redeploy prod app stack
       #   run: |
       #     export APP_VERSION=prod-${{ github.event.workflow_run.head_sha }}
       #     docker compose -f deployment/homework-5/prod/docker-compose.prod.yml down -v --remove-orphans
@@ -34,11 +41,12 @@ jobs:
 
       - name: Redeploy prod app stack
         run: |
-          export APP_VERSION=prod-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
-          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml pull app nginx migrate
-          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d db
-          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up migrate
-          docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d --force-recreate app nginx
+          COMPOSE="docker compose -f deployment/homework-5/prod/docker-compose.prod.yml"
+
+          $COMPOSE pull app nginx migrate
+          $COMPOSE up -d db
+          $COMPOSE up migrate
+          $COMPOSE up -d --force-recreate app nginx
 
       - name: Verify deployment
         run: |
