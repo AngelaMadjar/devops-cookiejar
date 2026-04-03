@@ -20,20 +20,23 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Pull latest images
         run: |
-          docker pull ghcr.io/angelamadjar/cookiejar-api:dev || true
-          docker pull ghcr.io/angelamadjar/cookiejar-nginx:dev || true
-
-      # - name: Restart dev stack
-      #   run: |
-      #     export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
-      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml down -v --remove-orphans
-      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d
+          export IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
+          docker pull ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
+          docker pull ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
 
       - name: Redeploy dev app stack
         run: |
-          export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
+          export IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
+          export APP_VERSION="dev-$(echo "${IMAGE_TAG}" | cut -c1-8)"
+
+          echo "IMAGE_TAG=$IMAGE_TAG"
+          echo "APP_VERSION=$APP_VERSION"
+
           docker compose -f deployment/homework-5/dev/docker-compose.dev.yml pull app nginx migrate
           docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d db
           docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up migrate
@@ -45,3 +48,8 @@ jobs:
           curl -fsS http://localhost:8088/health
           curl -fsS http://localhost:8088/version
 
+      # - name: Restart dev stack
+      #   run: |
+      #     export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
+      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml down -v --remove-orphans
+      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d

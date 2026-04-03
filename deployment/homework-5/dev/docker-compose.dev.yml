@@ -5,11 +5,18 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+        interval: 2s
+        timeout: 2s
+        retries: 30
+    volumes:
+      - cookiejar_pgdata_dev
     networks:
       - cookiejar-net
 
   migrate:
-    image: ghcr.io/angelamadjar/cookiejar-api:dev
+    image: ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
       FLASK_APP: app.py
@@ -19,7 +26,7 @@ services:
     networks:
       - cookiejar-net
   app:
-    image: ghcr.io/angelamadjar/cookiejar-api:dev
+    image: ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
       APP_COLOR: green
@@ -35,7 +42,7 @@ services:
       - cookiejar-net
 
   nginx:
-    image: ghcr.io/angelamadjar/cookiejar-nginx:dev
+    image: ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
     ports:
       - "8088:80"
     depends_on:
