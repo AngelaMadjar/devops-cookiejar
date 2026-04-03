@@ -20,29 +20,18 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Set image tag
-        run: |
-          echo "IMAGE_TAG=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
-          echo "APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)" >> $GITHUB_ENV
-
       - name: Pull latest images
-        env:
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
+          IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+
           docker pull ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
           docker pull ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
 
-      # - name: Restart dev stack
-      #   run: |
-      #     export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
-      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml down -v --remove-orphans
-      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d
-
       - name: Redeploy dev app stack
-        env:
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          APP_VERSION: ${{ env.APP_VERSION }}
         run: |
+          export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+          export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
+
           COMPOSE="docker compose -f deployment/homework-5/dev/docker-compose.dev.yml"
 
           $COMPOSE pull app nginx migrate
@@ -50,6 +39,13 @@ jobs:
           $COMPOSE up migrate
           $COMPOSE up -d --force-recreate app nginx
 
+      # - name: Restart dev stack
+      #   run: |
+      #     export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
+      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml down -v --remove-orphans
+      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d
+
+    
       - name: Verify deployment
         run: |
           sleep 10
