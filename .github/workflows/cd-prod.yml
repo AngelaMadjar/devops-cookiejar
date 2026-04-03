@@ -41,7 +41,7 @@ jobs:
           $COMPOSE up -d db
           $COMPOSE up migrate
           $COMPOSE up -d --force-recreate app nginx
-          
+
       - name: Verify deployment
         run: |
           sleep 10
