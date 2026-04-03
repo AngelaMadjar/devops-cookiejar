@@ -14,6 +14,10 @@ jobs:
       github.event.workflow_run.head_branch == 'dev'
     runs-on: [self-hosted, macOS, ARM64]
 
+    env:
+      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+      APP_VERSION: dev-${{ github.event.workflow_run.head_sha }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,16 +26,11 @@ jobs:
 
       - name: Pull latest images
         run: |
-          IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
-
           docker pull ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
           docker pull ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
 
       - name: Redeploy dev app stack
         run: |
-          export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
-          export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
-
           COMPOSE="docker compose -f deployment/homework-5/dev/docker-compose.dev.yml"
 
           $COMPOSE pull app nginx migrate
