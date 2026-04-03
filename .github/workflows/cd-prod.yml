@@ -47,7 +47,6 @@ jobs:
           sleep 10
           curl -fsS http://localhost:8089/health
           curl -fsS http://localhost:8089/version
-          
 
 # name: Deploy to Prod (Mac)
 
