@@ -6,19 +6,16 @@ on:
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true
     environment: production
     runs-on: [self-hosted, macOS, ARM64]
 
     env:
-      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
-      APP_VERSION: prod-${{ github.event.workflow_run.head_sha }}
+      IMAGE_TAG: ${{ github.sha }}
+      APP_VERSION: prod-${{ github.sha }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -27,7 +24,7 @@ jobs:
         run: |
           docker pull ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
           docker pull ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
-
+      
       # - name: Redeploy prod app stack
       #   run: |
       #     export APP_VERSION=prod-${{ github.event.workflow_run.head_sha }}
