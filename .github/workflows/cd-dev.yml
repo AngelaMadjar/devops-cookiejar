@@ -53,3 +53,5 @@ jobs:
       #     export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
       #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml down -v --remove-orphans
       #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d
+
+      
