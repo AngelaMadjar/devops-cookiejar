@@ -9,12 +9,12 @@ bp = Blueprint("meta", __name__)
 def health():
     return jsonify({"status": "ok"}), 200
 
-# @bp.get("/version")
-# def version():
-#     return jsonify({
-#         "color": os.getenv("APP_COLOR", "unknown"),
-#         "version": os.getenv("APP_VERSION", "dev")
-#     }), 200
+@bp.get("/version")
+def version():
+    return jsonify({
+        "color": os.getenv("APP_COLOR", "unknown"),
+        "version": os.getenv("APP_VERSION", "dev")
+    }), 200
 
 @bp.get("/stats")
 def stats():

@@ -13,7 +13,7 @@ services:
     networks: [cookiejar-net]
 
   migrate:
-    image: cookiejar-api:${IMAGE_TAG} # ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
+    image: cookiejar-api:${IMAGE_TAG}
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
       FLASK_APP: app.py
@@ -25,7 +25,7 @@ services:
       sh -lc "flask db upgrade"
 
   app:
-    image: cookiejar-api:${IMAGE_TAG} # ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
+    image: cookiejar-api:${IMAGE_TAG}
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
       APP_COLOR: green
@@ -37,7 +37,7 @@ services:
       - cookiejar-net
 
   nginx:
-    image: cookiejar-nginx:${IMAGE_TAG} # ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
+    image: cookiejar-nginx:${IMAGE_TAG}
     ports:
       - "8088:80"
     depends_on:
@@ -47,3 +47,7 @@ services:
 
 networks:
   cookiejar-net:
+
+volumes:
+  cookiejar_pgdata:
+

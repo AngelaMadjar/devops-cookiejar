@@ -49,9 +49,9 @@ jobs:
           curl -fsS -X POST http://localhost:8088/db/populate
           curl -fsS http://localhost:8088/stats
 
-      - name: Log in to GHCR 
-        if: github.event_name == 'push'
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      # - name: Log in to GHCR 
+      #   if: github.event_name == 'push'.
+      #   run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Tag app image for GHCR
         if: github.event_name == 'push'
