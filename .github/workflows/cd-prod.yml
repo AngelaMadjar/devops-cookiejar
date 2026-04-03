@@ -1,17 +1,20 @@
 name: Deploy to Prod (Mac)
 
 on:
-  push:
+  pull_request:
     branches: [main]
+    types: [closed]
 
 jobs:
   deploy:
     environment: production
     runs-on: [self-hosted, macOS, ARM64]
 
+    if: github.event.pull_request.merged == true
+    
     env:
-      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
-      APP_VERSION: prod-${{ github.event.workflow_run.head_sha }}
+      IMAGE_TAG: ${{ github.event.pull_request.head.sha }}
+      APP_VERSION: prod-${{ github.event.pull_request.head.sha }}
 
     steps:
       - name: Checkout repository
