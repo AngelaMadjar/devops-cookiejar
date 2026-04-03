@@ -14,40 +14,42 @@ jobs:
       github.event.workflow_run.head_branch == 'dev'
     runs-on: [self-hosted, macOS, ARM64]
 
-    env:
-      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
-      APP_VERSION: dev-${{ github.event.workflow_run.head_sha }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Pull latest images
         run: |
+          export IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
           docker pull ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
           docker pull ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
 
       - name: Redeploy dev app stack
         run: |
-          COMPOSE="docker compose -f deployment/homework-5/dev/docker-compose.dev.yml"
+          export IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
+          export APP_VERSION="dev-$(echo "${IMAGE_TAG}" | cut -c1-8)"
 
-          $COMPOSE pull app nginx migrate
-          $COMPOSE up -d db
-          $COMPOSE up migrate
-          $COMPOSE up -d --force-recreate app nginx
+          echo "IMAGE_TAG=$IMAGE_TAG"
+          echo "APP_VERSION=$APP_VERSION"
 
-      # - name: Restart dev stack
-      #   run: |
-      #     export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
-      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml down -v --remove-orphans
-      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d
+          docker compose -f deployment/homework-5/dev/docker-compose.dev.yml pull app nginx migrate
+          docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d db
+          docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up migrate
+          docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d --force-recreate app nginx
 
-    
       - name: Verify deployment
         run: |
           sleep 10
           curl -fsS http://localhost:8088/health
           curl -fsS http://localhost:8088/version
 
+      # - name: Restart dev stack
+      #   run: |
+      #     export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
+      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml down -v --remove-orphans
+      #     docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d
