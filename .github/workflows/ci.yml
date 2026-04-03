@@ -2,10 +2,9 @@ name: Homework 5 CI
 
 on:
   push:
-    branches: [dev, main]
+    branches: [dev]
   pull_request:
     branches: [main]
-
 
 permissions:
   contents: read
