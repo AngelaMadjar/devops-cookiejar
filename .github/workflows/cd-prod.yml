@@ -1,50 +1,60 @@
-name: Deploy to Prod (Mac)
+name:  Deploy to Prod (Mac)
 
 on:
-  pull_request:
-    branches: [main]
-    types: [closed]
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: "Tested image SHA to promote"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  deploy:
+  promote-and-deploy:
     environment: production
     runs-on: [self-hosted, macOS, ARM64]
 
-    if: github.event.pull_request.merged == true
-    
     env:
-      IMAGE_TAG: ${{ github.event.pull_request.head.sha }}
-      APP_VERSION: prod-${{ github.event.pull_request.head.sha }}
+      IMAGE_TAG: ${{ inputs.image_sha }}
+      APP_VERSION: prod-${{ inputs.image_sha }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Pull latest prod images
+      - name: Pull exact tested images
         run: |
           docker pull ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
           docker pull ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
+
+      - name: Add prod alias tags
+        run: |
+          docker tag ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:prod
+          docker tag ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-nginx:prod
+          docker push ghcr.io/angelamadjar/cookiejar-api:prod
+          docker push ghcr.io/angelamadjar/cookiejar-nginx:prod
+
+      - name: Redeploy prod using exact SHA
+        run: |
+          export IMAGE_TAG=${IMAGE_TAG}
+          COMPOSE="docker compose -f deployment/homework-5/prod/docker-compose.prod.yml"
+          $COMPOSE up -d db
+          $COMPOSE up migrate
+          $COMPOSE up -d --force-recreate app nginx
+
+      - name: Verify prod
+        run: |
+          sleep 10
+          curl -fsS http://localhost:8089/health
+          curl -fsS http://localhost:8089/version
       
       # - name: Redeploy prod app stack
       #   run: |
       #     export APP_VERSION=prod-${{ github.event.workflow_run.head_sha }}
       #     docker compose -f deployment/homework-5/prod/docker-compose.prod.yml down -v --remove-orphans
       #     docker compose -f deployment/homework-5/prod/docker-compose.prod.yml up -d
-
-      - name: Redeploy prod app stack
-        run: |
-          COMPOSE="docker compose -f deployment/homework-5/prod/docker-compose.prod.yml"
-
-          $COMPOSE pull app nginx migrate
-          $COMPOSE up -d db
-          $COMPOSE up migrate
-          $COMPOSE up -d --force-recreate app nginx
-
-      - name: Verify deployment
-        run: |
-          sleep 10
-          curl -fsS http://localhost:8089/health
-          curl -fsS http://localhost:8089/version
