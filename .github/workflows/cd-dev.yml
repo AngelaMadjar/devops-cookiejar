@@ -20,10 +20,15 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Set image tag
+        run: |
+          echo "IMAGE_TAG=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+          echo "APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)" >> $GITHUB_ENV
+
       - name: Pull latest images
         run: |
-          docker pull ghcr.io/angelamadjar/cookiejar-api:dev || true
-          docker pull ghcr.io/angelamadjar/cookiejar-nginx:dev || true
+          docker pull ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
+          docker pull ghcr.io/angelamadjar/cookiejar-nginx:${IMAGE_TAG}
 
       # - name: Restart dev stack
       #   run: |
@@ -33,7 +38,6 @@ jobs:
 
       - name: Redeploy dev app stack
         run: |
-          export APP_VERSION=dev-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-8)
           docker compose -f deployment/homework-5/dev/docker-compose.dev.yml pull app nginx migrate
           docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up -d db
           docker compose -f deployment/homework-5/dev/docker-compose.dev.yml up migrate

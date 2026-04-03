@@ -2,7 +2,7 @@ name: Homework 5 CI
 
 on:
   push:
-    branches: [dev, main]
+    branches: [dev]
   pull_request:
     branches: [main]
 
@@ -70,6 +70,8 @@ jobs:
         if: github.event_name == 'push'
         run: docker push ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-nginx:${{ github.sha }}
 
+
+        # Tag images as dev if ci is run by push on dev
       - name: Tag app image as dev
         if: github.event_name == 'push' && github.ref_name == 'dev'
         run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:dev
@@ -86,6 +88,8 @@ jobs:
         if: github.event_name == 'push' && github.ref_name == 'dev'
         run: docker push ghcr.io/angelamadjar/cookiejar-nginx:dev
 
+
+        # Tag images as prod if ci is run by push on main
       - name: Tag app image as prod
         if: github.event_name == 'push' && github.ref_name == 'main'
         run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:prod
