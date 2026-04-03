@@ -71,40 +71,40 @@ jobs:
         run: docker push ghcr.io/${{ env.GHCR_NAMESPACE }}/cookiejar-nginx:${{ github.sha }}
 
 
-        # Tag images as dev if ci is run by push on dev
-      - name: Tag app image as dev
-        if: github.event_name == 'push' && github.ref_name == 'dev'
-        run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:dev
+      #   # Tag images as dev if ci is run by push on dev
+      # - name: Tag app image as dev
+      #   if: github.event_name == 'push' && github.ref_name == 'dev'
+      #   run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:dev
 
-      - name: Tag nginx image as dev
-        if: github.event_name == 'push' && github.ref_name == 'dev'
-        run: docker tag cookiejar-nginx:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-nginx:dev
+      # - name: Tag nginx image as dev
+      #   if: github.event_name == 'push' && github.ref_name == 'dev'
+      #   run: docker tag cookiejar-nginx:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-nginx:dev
 
-      - name: Push app image dev tag
-        if: github.event_name == 'push' && github.ref_name == 'dev'
-        run: docker push ghcr.io/angelamadjar/cookiejar-api:dev
+      # - name: Push app image dev tag
+      #   if: github.event_name == 'push' && github.ref_name == 'dev'
+      #   run: docker push ghcr.io/angelamadjar/cookiejar-api:dev
 
-      - name: Push nginx image dev tag
-        if: github.event_name == 'push' && github.ref_name == 'dev'
-        run: docker push ghcr.io/angelamadjar/cookiejar-nginx:dev
+      # - name: Push nginx image dev tag
+      #   if: github.event_name == 'push' && github.ref_name == 'dev'
+      #   run: docker push ghcr.io/angelamadjar/cookiejar-nginx:dev
 
 
-        # Tag images as prod if ci is run by push on main
-      - name: Tag app image as prod
-        if: github.event_name == 'push' && github.ref_name == 'main'
-        run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:prod
+      #   # Tag images as prod if ci is run by push on main
+      # - name: Tag app image as prod
+      #   if: github.event_name == 'push' && github.ref_name == 'main'
+      #   run: docker tag cookiejar-api:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-api:prod
 
-      - name: Tag nginx image as prod
-        if: github.event_name == 'push' && github.ref_name == 'main'
-        run: docker tag cookiejar-nginx:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-nginx:prod
+      # - name: Tag nginx image as prod
+      #   if: github.event_name == 'push' && github.ref_name == 'main'
+      #   run: docker tag cookiejar-nginx:${IMAGE_TAG} ghcr.io/angelamadjar/cookiejar-nginx:prod
 
-      - name: Push app image prod tag
-        if: github.event_name == 'push' && github.ref_name == 'main'
-        run: docker push ghcr.io/angelamadjar/cookiejar-api:prod
+      # - name: Push app image prod tag
+      #   if: github.event_name == 'push' && github.ref_name == 'main'
+      #   run: docker push ghcr.io/angelamadjar/cookiejar-api:prod
 
-      - name: Push nginx image prod tag
-        if: github.event_name == 'push' && github.ref_name == 'main'
-        run: docker push ghcr.io/angelamadjar/cookiejar-nginx:prod
+      # - name: Push nginx image prod tag
+      #   if: github.event_name == 'push' && github.ref_name == 'main'
+      #   run: docker push ghcr.io/angelamadjar/cookiejar-nginx:prod
 
       - name: Show container logs on failure
         if: failure()
