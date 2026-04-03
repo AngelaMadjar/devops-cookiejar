@@ -53,3 +53,4 @@ jobs:
           curl -fsS http://localhost:8088/health
           curl -fsS http://localhost:8088/version
 
+
