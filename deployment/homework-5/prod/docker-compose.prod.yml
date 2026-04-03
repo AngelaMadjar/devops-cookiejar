@@ -2,11 +2,11 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
         interval: 2s
         timeout: 2s
         retries: 30
@@ -16,7 +16,7 @@ services:
   migrate:
     image: ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
+      DATABASE_URL: ${DATABASE_URL}
       FLASK_APP: app.py
     depends_on:
       - db
@@ -27,7 +27,7 @@ services:
   app:
     image: ghcr.io/angelamadjar/cookiejar-api:${IMAGE_TAG}
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/postgres
+      DATABASE_URL: ${DATABASE_URL}
       APP_COLOR: blue
       APP_VERSION: ${APP_VERSION}
     depends_on:

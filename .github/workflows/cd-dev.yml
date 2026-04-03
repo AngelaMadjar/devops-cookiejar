@@ -12,11 +12,16 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'dev'
+    environment: development
     runs-on: [self-hosted, macOS, ARM64]
 
     env:
       IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
       APP_VERSION: dev-${{ github.event.workflow_run.head_sha }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      DATABASE_URL: postgresql+psycopg2://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:5432/${{ secrets.POSTGRES_DB }}
 
     steps:
       - name: Checkout repository
