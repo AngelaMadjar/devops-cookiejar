@@ -57,5 +57,3 @@ jobs:
           sleep 10
           curl -fsS http://localhost:8088/health
           curl -fsS http://localhost:8088/version
-
-# test
